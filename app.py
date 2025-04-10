@@ -7,7 +7,7 @@ import os
 
 app = Flask(__name__)
 
-# LINE credentials (從環境變數讀取)
+# LINE credentials
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
@@ -16,6 +16,10 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 # InternLM API 設定
 INTERNLM_API_URL = 'https://chat.intern-ai.org.cn/api/v1/chat/completions'
 INTERNLM_API_TOKEN = os.getenv('INTERNLM_API_TOKEN')
+
+@app.route("/", methods=["GET"])
+def home():
+    return "LINE BOT with InternLM is running."
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -41,20 +45,28 @@ def get_internlm_reply(user_message):
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {INTERNLM_API_TOKEN}'
     }
+
     payload = {
-        "model": "internlm3-chat-8b",
-        "messages": [{"role": "user", "content": user_message}],
+        "model": "internlm3-latest",
+        "messages": [
+            {"role": "user", "content": user_message}
+        ],
         "temperature": 0.8,
         "top_p": 0.9
     }
+
+    print("payload:", payload)  # ✅ Debug log：顯示送出的 payload
+
     try:
-        response = requests.post(INTERNLM_API_URL, headers=headers, json=payload, timeout=30)
+        response = requests.post(INTERNLM_API_URL, headers=headers, json=payload, timeout=20)
+
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            return f"模型錯誤，代碼 {response.status_code}"
+            print("⚠️ InternLM 回傳錯誤：", response.status_code, response.text)
+            return f"⚠️ 模型錯誤（{response.status_code}）：{response.text}"
     except Exception as e:
-        return f"模型回應異常：{e}"
+        return f"❌ 呼叫模型時發生錯誤：{str(e)}"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
