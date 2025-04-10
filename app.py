@@ -47,7 +47,7 @@ def get_internlm_reply(user_message):
     }
 
     payload = {
-        "model": "internlm3-latest",
+        "model": "internvl2.5-latest",
         "messages": [
             {"role": "user", "content": user_message}
         ],
